@@ -7,17 +7,25 @@ import UI
 import tkinter as tk
 import os
 import sys
-
+import threading
+from tkinter import colorchooser
+from tkinter import messagebox, ttk
 
 from QR_generation import color_qr
 from QR_detection import write_data
-
+from QR_detection import start_video_feed
+from QR_detection import Final_All_data_saved
+from QR_detection import count
+from QR_detection import create_csv
+#from QR_detection import clicked_skipped_button
+#from QR_detection import clicked_Undo_button
+import QR_detection
+ 
 
 def generate_folder_name():
     folder_name = "all_snapshots"
     os.makedirs(folder_name, exist_ok=True)
     return folder_name
-
 
 def Entry_Changed(event,key_name,entry):
     #global current_default
@@ -65,22 +73,92 @@ def creat_tags():
     family    =  UI.current_default['qr_family']['Option'][qr_family_Option_NUM]
     color_qr(filename , family , UI.current_default["qr_color"], UI.current_default["qr_size"])
 
+# this is a custom color when click on color button it will change color 
+#this creates a list of the button of color picker
+def custom_button_UI(button, number):
+    global current_default
+    color_code = colorchooser.askcolor(title="Choose color")
+    if str(color_code) == "(None, None)":
+        return
+    #print("rgb"+str(color_code[0]))    
+    button_style = ttk.Style()
+    button_style.configure(f"{button}.TButton", background= str(color_code[1])  )  # Change background color of the button
+    button.configure(style=f"{button}.TButton")  # Change the style of the button to 'CustomButtonRed'
+    UI.current_default["qr_color"][number] = color_code[0]
+
+#the number 2 is the seaction of the manual selection of positions
+def custom_button_UI_2(button, number):
+    global current_default , Final_All_data_saved
+    print("button", button.cget("text"))
+    button_text =  button.cget("text")
+    #count = str(co)
+    if button_text in Final_All_data_saved[str(QR_detection.count)]["Dont_Display_Num"]:
+        Final_All_data_saved[str(QR_detection.count)]["Dont_Display_Num"].remove(str(button_text))
+        #Final_All_data_saved[str(count)].pop(str(button_text))
+
+    elif button_text.isdigit():
+        Final_All_data_saved[str(QR_detection.count)]["Dont_Display_Num"].append(str(button_text))
+        del Final_All_data_saved[str(QR_detection.count)][str(button_text)]
+
+
+
 
 # this is the button function
-def Button_pressed(button, frame = None):
+def Button_pressed(button,frame = None , width= None, height= None ):
+    global clicked_skipped_button ,clicked_Undo_button
     #global current_default
     #print("button",button)
     File_Default_name = "Settings.json"
-    # button = ttk.Button(frame, text="Button", command=lambda: show_frame_page(frame2 if frame == frame1 else frame1))
-    if button in ["Next Page","Previous page"]:
-        print("next pages activated")
-        frame.tkraise()
+    # button = ttk.Button(frame, text="Button", command=lamb3da: show_frame_page(frame2 if frame == frame1 else frame1))
+
+    if button == "Next":
+        print("next button")
+        QR_detection.clicked_skipped_button = True
+
+    if button == "undo":
+        if QR_detection.count <= 0:
+            print("this is less this",QR_detection.count)
+            return
+        else:
+            QR_detection.clicked_Undo_button = True
+
+        print("undo")
+
+    if button == "-":
+        print("- sign")
+
+    if button == "ok":
+        print("ok")
+        QR_detection.result = float(UI.current_default["Measurement"])
+
+    if button == "canceled":
+        print("calceled")
+
+
+    #y, x
+    if button == "Previous page":
+        UI.show_frame_page(UI.frame1,1065,260)
+
+    if button == "Next Page":
+        UI.show_frame_page(UI.frame2, 290, 268)
+
+    if button == "Test page":
+        print("test page")
+        UI.show_frame_page(UI.frame3, 600, 35)
+
     if button == "Save All Default":
         write_data(File_Default_name, UI.current_default)
     if button == "Video Selected":
+        QR_detection.create_csv()
+
         file_paths = tk.filedialog.askopenfilenames(filetypes=[("All Files", "*.*")])
         file_paths = list(file_paths)
-        start_video_feed(file_paths)
+        #UI.show_frame_page(UI.frame4, 292, 70)
+        video_thread = threading.Thread(target=start_video_feed, args=(file_paths,))
+        video_thread.start()
+        #start_video_feed(file_paths)
+
+
     if button == "Camera Selected":
         pass
     if button == "Generate":

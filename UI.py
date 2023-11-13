@@ -1,6 +1,7 @@
 """
 this code the the UI and storing data on the program
 """
+#https://stackoverflow.com/questions/63107313/is-there-an-alternative-to-pyinstaller-for-python-3-8
 import tkinter as tk
 from tkinter import messagebox, ttk
 from tkinter import *
@@ -13,7 +14,7 @@ import json
 import os
 
 #this LIB is the backend fucn when presssed 
-from UI_Backend import create_spinbox_values , combobox_changed ,Button_pressed , Spinbox_changed , Entry_Changed ,CheckButton_changed ,create_spinbox_values
+from UI_Backend import create_spinbox_values , combobox_changed ,Button_pressed , Spinbox_changed , Entry_Changed ,CheckButton_changed ,create_spinbox_values , custom_button_UI ,custom_button_UI_2
 #from QR_detection import write_data
 
 
@@ -34,30 +35,14 @@ def read_file(file_path):
         return initial_content_str
 
 # next page 
-def show_frame_page(frame):
-    #print(frame)
-    #print(type(frame))
+def show_frame_page(frame, width, height):
     frame.tkraise()
-
-
-# this is a custom color when click on color button it will change color 
-#this creates a list of the button of color picker
-def custom_button_UI(button, number):
-    global current_default
-    color_code = colorchooser.askcolor(title="Choose color")
-    if str(color_code) == "(None, None)":
-        return
-    #print("rgb"+str(color_code[0]))    
-    button_style = ttk.Style()
-    button_style.configure(f"{button}.TButton", background= str(color_code[1])  )  # Change background color of the button
-    button.configure(style=f"{button}.TButton")  # Change the style of the button to 'CustomButtonRed'
-    current_default["qr_color"][number] = color_code[0]
-    
-    #print(current_default["qr_color"])
+    root.geometry(f"{width}x{height}")
 
 
 
-def UI_Gen(frame, All_Labels=None, ALL_Combobox=None, All_Entry=None, All_Spinbox=None, All_button=None, All_Check_Box=None, custom_lists_buttons=None):
+
+def UI_Gen(frame, All_Labels=None, ALL_Combobox=None, All_Entry=None, All_Spinbox=None, All_button=None, All_Check_Box=None, custom_lists_buttons=None, custom_lists_buttons2= None, width=None,height=None):
     #print(All_Labels)
     # create labels
     if All_Labels:
@@ -81,6 +66,7 @@ def UI_Gen(frame, All_Labels=None, ALL_Combobox=None, All_Entry=None, All_Spinbo
             entry.grid(row=value["row"], column=value["column"], sticky=value["sticky"])
             entry.bind("<KeyRelease>", lambda event, m=key_name, c=entry: Entry_Changed(event, m, c))
             entry.insert(0, key)
+
         # create spinboxes
     if All_Spinbox:
         for key, value in All_Spinbox.items():
@@ -93,17 +79,8 @@ def UI_Gen(frame, All_Labels=None, ALL_Combobox=None, All_Entry=None, All_Spinbo
     if All_button: 
         # creates buttons with custom pages
         for key, value in All_button.items():
-            # if statement is for adding extra element to go the next pages
-            if key in ["Next Page", "Previous page"]:
-                print("next pages detected")
-                button = ttk.Button(frame, text=key, style=value["style"], command=lambda m=key: Button_pressed(m,frame2 if frame == frame1 else frame1))
-                #button = ttk.Button(frame, text=key, style=value["style"], command=lambda target_frame=frame1: show_frame_page(target_frame))
-
-                button.grid(row=value["row"], column=value["column"], sticky=value["sticky"])
-
-            else:
-                button = ttk.Button(frame, text=key, style=value["style"], command=lambda m=key: Button_pressed(m))
-                button.grid(row=value["row"], column=value["column"], sticky=value["sticky"])
+            button = ttk.Button(frame, text=key, style=value["style"], command=lambda m=key , f = frame, w = width, h = height: Button_pressed(m,f,w,h))
+            button.grid(row=value["row"], column=value["column"], sticky=value["sticky"])
 
     # create comboboxes
     if ALL_Combobox:
@@ -125,32 +102,124 @@ def UI_Gen(frame, All_Labels=None, ALL_Combobox=None, All_Entry=None, All_Spinbo
 
     if custom_lists_buttons:
         for key, value in custom_lists_buttons.items():
-            for i in range(0, 10):
+            # Create a frame to hold the buttons
+            button_frame = ttk.Frame(frame)
+            button_frame.grid(row=value["row"], column=value["column"], sticky="ew")
+
+            # Configure the frame to fill the cell horizontally
+            frame.columnconfigure(value["column"], weight=1)
+
+            # Configure the button_frame to expand and fill space, only horizontally.
+            # Set weight for all columns to 1 to divide space equally
+            for col in range(10):
+                button_frame.columnconfigure(col, weight=1)
+
+            for i in range(10):
                 button_style = f"Button{i}" + ".TButton"
                 color = current_default['qr_color'].get(str(i), [0, 0, 0])
                 hex_color = '#%02x%02x%02x' % (color[0], color[1], color[2])
                 style = ttk.Style()
-                style.configure(button_style, background=hex_color)
-                button2 = ttk.Button(frame, text=f"{i}", style=button_style)
-                button2.configure(command=lambda btn=button2, idx=i: custom_button_UI(btn, idx))
-                button2.grid(row=value["row"], column=value["column"], sticky="NW", ipadx=5, ipady=0, padx=i * 15, pady=0)
+                # Adjust the padding to change the height, (left, top, right, bottom)
+                style.configure(button_style, background=hex_color, padding=(1, 1, 1, 1))
 
-    label = ttk.Label(frame, text=string, style="New_Custom.TLabel")
-    label.grid(row=8, column=0, sticky="nsew")
+                button2 = ttk.Button(button_frame, text=f"{i}", style=button_style)
+                button2.configure(command=lambda idx=i, btn=button2: custom_button_UI(btn, idx))
 
-    #window.iconphoto(False, new_image)
-    #window.columnconfigure(0, weight=1)
-    #window.columnconfigure(1, weight=1)
-    #window.columnconfigure(2, weight=1)
-    #window.columnconfigure(3, weight=1)
-    #window.columnconfigure(4, weight=1)
-    #window.columnconfigure(5, weight=1)
-    #window.mainloop()
+                # Grid the button with sticky='ew' so it expands only horizontally
+                button2.grid(row=0, column=i, sticky="ew")
+    print(custom_lists_buttons2)    
+
+    if custom_lists_buttons2 and isinstance(custom_lists_buttons2, dict):
+        for key, value in custom_lists_buttons2.items():
+            # Create a frame to hold the buttons
+            button_frame = ttk.Frame(frame)
+            button_frame.grid(row=value["row"], column=value["column"], sticky="ew")
+
+            # Configure the frame to fill the cell horizontally
+            frame.columnconfigure(value["column"], weight=1)
+
+            # Configure the button_frame to expand and fill space, only horizontally.
+            # Set weight for all columns to 1 to divide space equally
+            for col in range(10):
+                button_frame.columnconfigure(col, weight=1)
+
+            for i in range(10):
+                button_style = f"Button{i}" + ".TButton"
+                color = current_default['qr_color'].get(str(i), [0, 0, 0])
+                hex_color = '#%02x%02x%02x' % (color[0], color[1], color[2])
+                style = ttk.Style()
+                # Adjust the padding to change the height, (left, top, right, bottom)
+                style.configure(button_style, background=hex_color, padding=(1, 1, 1, 1))
+
+                button2 = ttk.Button(button_frame, text=f"{i}", style=button_style)
+                button2.configure(command=lambda idx=i, btn=button2: custom_button_UI_2(btn, idx))
+
+                # Grid the button with sticky='ew' so it expands only horizontally
+                button2.grid(row=0, column=i, sticky="ew")
+
+    
 
 
 
-def create_frame(root, bg_color):
-    frame = tk.Frame(root)
+
+    #label = ttk.Label(frame, text=string, style="New_Custom.TLabel")
+    #label.grid(row=8, column=0, sticky="nsew")
+
+def Measurement_UI(root, bg_color,width=100, height=100):
+    frame = tk.Frame(root,width=100, height=100)
+    frame.grid(row=0, column=0, sticky='nsew')
+    frame.configure(bg=bg_color)
+
+    All_Labels = {
+       "Measurement in CM": {"style": 'New_Custom.TLabel', "row": 0, "column": 0, "sticky": "nsew"},
+
+    }
+
+
+    All_Entry = {
+        "Measurement": {"style": 'New_Custom.TEntry', "row": 0, "column": 1, "sticky": "nsew"},
+
+    }
+
+    All_button = {
+        "ok": {"style": 'New_Custom.TButton', "row": 1, "column": 0, "sticky": "nsew"},
+        "canceled": {"style": 'New_Custom.TButton', "row": 1, "column": 1, "sticky": "nsew"},
+    }
+
+    print("new frame")
+    UI_Gen(frame, All_Labels=All_Labels, ALL_Combobox=None, All_Entry=All_Entry, All_Spinbox=None, All_button=All_button, All_Check_Box=None, custom_lists_buttons=None,width = 100 ,height = 100)
+    return frame
+
+
+def Video_Frame(root, bg_color,width=600, height=50):
+    frame = tk.Frame(root,width=600, height=50)
+    frame.grid(row=0, column=0, sticky='nsew')
+    frame.configure(bg=bg_color)
+
+    custom_lists_buttons2 = {
+        "color_detect": {"style": 'New_Custom.TButton', "amount_of_buttons": 10, "row": 0, "column": 1, "sticky": "nsew"}
+    }
+
+    All_Entry = {
+        "minuse": {"style": 'New_Custom.TEntry', "row": 0, "column": 2, "sticky": "nsew"},
+
+    }
+
+    All_button = {
+        "-": {"style": 'New_Custom.TButton', "row": 0, "column": 3, "sticky": "nsew"},
+        "undo": {"style": 'New_Custom.TButton', "row": 0, "column": 4, "sticky": "nsew"},
+        "Next": {"style": 'New_Custom.TButton', "row": 0, "column": 5, "sticky": "nsew"},
+    }
+
+    print("new frame")
+    UI_Gen(frame, All_Labels=None, ALL_Combobox=None, All_Entry=All_Entry, All_Spinbox=None, All_button=All_button, All_Check_Box=None, custom_lists_buttons2=custom_lists_buttons2, width = 600 ,height = 50)
+    return frame
+
+
+
+
+def Excel_Frame(root, bg_color,width=200, height=300):
+    frame = tk.Frame(root,width=200, height=300)
     frame.grid(row=0, column=0, sticky='nsew')
     frame.configure(bg=bg_color)
 
@@ -158,40 +227,40 @@ def create_frame(root, bg_color):
         "IMAGE": {"image": new_image, "style": 'New_Custom.TLabel', "row": 0, "column": 0, "sticky": "nsew"},
         "Exel Settings": {"style": 'New_Custom.TLabel', "row": 0, "column": 1, "sticky": "nsew"},
         "Experiment Name": {"style": 'New_Custom.TLabel', "row": 1, "column": 0, "sticky": "nsew"},
-        "Date OF Video": {"style": 'New_Custom.TLabel', "row": 2, "column": 0, "sticky": "nsew"},
-        "Date Logged": {"style": 'New_Custom.TLabel', "row": 3, "column": 0, "sticky": "nsew"},
-        "Initial": {"style": 'New_Custom.TLabel', "row": 4, "column": 0, "sticky": "nsew"},
-        "Treatment": {"style": 'New_Custom.TLabel', "row": 5, "column": 0, "sticky": "nsew"},
-       
+        "Round": {"style": 'New_Custom.TLabel', "row": 2, "column": 0, "sticky": "nsew"},
+        "Date OF Video": {"style": 'New_Custom.TLabel', "row": 3, "column": 0, "sticky": "nsew"},
+        "Date Logged": {"style": 'New_Custom.TLabel', "row": 4, "column": 0, "sticky": "nsew"},
+        "Initial": {"style": 'New_Custom.TLabel', "row": 5, "column": 0, "sticky": "nsew"},
+        "Time video started": {"style": 'New_Custom.TLabel', "row": 6, "column": 0, "sticky": "nsew"},
+        "Treatment": {"style": 'New_Custom.TLabel', "row": 7, "column": 0, "sticky": "nsew"},
     }
 
     All_button = {
         "Previous page": {"style": 'New_Custom.TButton', "row": 15, "column": 0, "sticky": "nsew"},
+       # "Test page": {"style": 'New_Custom.TButton', "row": 15, "column": 6, "sticky": "nsew"},
     }
 
     All_Entry = {
         "Experiment_Name": {"style": 'New_Custom.TEntry', "row": 1, "column": 1, "sticky": "nsew"},
-        "Date_OF_Vid": {"style": 'New_Custom.TEntry', "row": 2, "column": 1, "sticky": "nsew"},
-        "Date_Logged": {"style": 'New_Custom.TEntry', "row": 3, "column": 1, "sticky": "nsew"},
-        "Initial": {"style": 'New_Custom.TEntry', "row": 4, "column": 1, "sticky": "nsew"},
-        "Treatment": {"style": 'New_Custom.TEntry', "row": 5, "column": 1, "sticky": "nsew"},
+        "Round": {"style": 'New_Custom.TEntry', "row": 2, "column": 1, "sticky": "nsew"},
+
+        "Dates_OF_Vid": {"style": 'New_Custom.TEntry', "row": 3, "column": 1, "sticky": "nsew"},
+        "Date_Logged": {"style": 'New_Custom.TEntry', "row": 4, "column": 1, "sticky": "nsew"},
+
+        "Initial": {"style": 'New_Custom.TEntry', "row": 5, "column": 1, "sticky": "nsew"},
+        "Time_vide_started": {"style": 'New_Custom.TEntry', "row": 6, "column": 1, "sticky": "nsew"},
+        "Treatment": {"style": 'New_Custom.TEntry', "row": 7, "column": 1, "sticky": "nsew"},
     }
 
     ALL_Combobox = {}
-
-    #UI_Gen(frame,All_Labels,ALL_Combobox,All_button)
-    #UI_Gen(frame, All_Labels, ALL_Combobox, All_Entry=None, All_Spinbox=None, All_button, All_Check_Box=None, custom_lists_buttons=None)
-
-    UI_Gen(frame, All_Labels=All_Labels, ALL_Combobox=ALL_Combobox, All_Entry=All_Entry, All_Spinbox=None, All_button=All_button, All_Check_Box=None, custom_lists_buttons=None)
-
-
-    
+    UI_Gen(frame, All_Labels=All_Labels, ALL_Combobox=ALL_Combobox, All_Entry=All_Entry, All_Spinbox=None, All_button=All_button, All_Check_Box=None, custom_lists_buttons=None,width = width ,height = height)
     return frame
 
 
 
-def UI_Main(root, bg_color):
-    frame = tk.Frame(root)
+def UI_Main(root, bg_color,width=700, height=300):
+
+    frame = tk.Frame(root,width=700, height=700)
     frame.grid(row=0, column=0, sticky='nsew')
     frame.configure(bg=bg_color)
 
@@ -250,7 +319,7 @@ def UI_Main(root, bg_color):
     }
 
     #UI_Main_Back()
-    UI_Gen(frame,All_Labels,ALL_Combobox,All_Entry,All_Spinbox,All_button,All_Check_Box,custom_lists_buttons)
+    UI_Gen(frame,All_Labels,ALL_Combobox,All_Entry,All_Spinbox,All_button,All_Check_Box,custom_lists_buttons,width,height)
 
 
 
@@ -278,7 +347,6 @@ def check_File_Settings():
 
 
 root = tk.Tk()
-
 style = ttk.Style()
 style.theme_create("New_Custom", parent="alt", settings={
     "TLabel": {"configure": {"foreground": "#FFFFFF", "background": "#8c0b42", "font": ("Comic Sans MS", 13, "bold")}},
@@ -324,16 +392,42 @@ Default_settings = {
         "debug":0.0,
         "size_reduced":4.0,
         "set_data_file_name":"bird_data",
-        "data_header":['Treatment', 'Group', 'Video_date', 'Snapshot_', 'Neighbor_1', "Neighbor_2", "Distance_cm", "block","half"],
+        "data_header":[
+            'Experiment name',
+            'Round',
+            'Date of video',
+            'Date Logged',
+            'Qr Family',
+            'NThreads',
+            'Quad Decimage',
+            'Quad Sigma',
+            'Refine Edges',
+            'Decode Sharpening',
+            'Debug',
+            'Initials',
+            'Scan time interval (s)',
+            'Time Video Start',
+            'Time from start',
+            'Scan #',
+            'Treatment',
+            'Individual 1',
+            'Individual 2',
+            'Distance (cm)'
+        ],
         "data_format":"['Young', '1', 'day,month,year', 'Snapshot_', 'Neighbor_1', 'Neighbor_2', 'Distance_cm', 'block','half']",
+
         "skip_sec":180.0,
         "qr_keys":"[0,1,2,3]",
         "Save_Snapshot":False,
-        "Experiment_Name":"test",
-        "Date_OF_Vid":"Date_OF_Vid",
-        "Date_Logged":"Date_Logged",
+        "Experiment_Name":"Name",
+        "Round":"1",
+        "Dates_OF_Vid":"Date",
+        "Date_Logged":"Logged",
         "Initial":"Initial",
-        "Treatment":"Treatment"
+        "Time_vide_started":"00:00",
+        "Treatment":"Treatment",
+        "minuse":1,
+        "Measurement":""
 
 
 }
@@ -364,13 +458,17 @@ string = bytes.fromhex(hex_str).decode('utf-8')
 root.title("Title of Your Application")
 
 #creates new pages
-frame2 = create_frame(root, "#8c0b42")
-frame1 = UI_Main(root, "#8c0b42")
+frame1 = UI_Main(root, "#8c0b42",width=1065, height=260)
+frame2 = Excel_Frame(root, "#8c0b42",width=400, height=300)
+frame3 = Video_Frame(root, "#8c0b42",width=600, height=50)
+frame4 = Measurement_UI(root, "#8c0b42",width=100, height=100)
+
 
 root.grid_rowconfigure(0, weight=1)
 root.grid_columnconfigure(0, weight=1)
 
-show_frame_page(frame1)
+
+show_frame_page(frame1,1065,260)
 
 
 

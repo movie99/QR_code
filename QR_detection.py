@@ -1,18 +1,70 @@
 """
 this code is the backend for getting length and for qr detection
 
+experiment_round_treatment_date_initals.csv 
+example:
+bird_round1_stress_9/23/23_VMB.csv
+
 """
 import json
 import ast
 import csv
+import UI
+import cv2
+import cv2 as cv
+import os
+import copy
+import ast
+import threading
+import UI
+import math
+
+from functools import partial
+from datetime import datetime
+
+from pupil_apriltags import Detector
+from tkinter import simpledialog, messagebox
+
+def reset_globals():
+    global clicked_skipped_button
+    global clicked_Undo_button
+    global Final_All_data_saved
+    global stop_ui_thread_flag
+    global Next_Frames_Capture
+    global count
+    global result
+    global drawing
+    global pt1, pt2
+    global pixels_to_cm_ratio
+    global length_in_pexels
+    global line_pt1, line_pt2
+
+    clicked_skipped_button = False
+    clicked_Undo_button = False
+    Final_All_data_saved = {}
+    stop_ui_thread_flag = False
+    Next_Frames_Capture = 0
+    count = 0
+    result = None
+    drawing = False
+    pt1, pt2 = (-1, -1), (-1, -1)
+    pixels_to_cm_ratio = 0.0
+    length_in_pexels = 0
+    line_pt1, line_pt2 = (0, 0), (0, 0)
+
+
 
 def create_csv():
-    if not os.path.exists(current_default["set_data_file_name"]+".csv"):
-        # file does not exist, so create it
-        with open(current_default["set_data_file_name"]+".csv", 'w', encoding='UTF8',  newline='') as f:
+
+    # Assuming UI.current_default['data_header'] is the list of column names
+    file_formate = UI.current_default["Experiment_Name"] + UI.current_default["Round"] + "_" + UI.current_default["Treatment"] + "_" + UI.current_default["Dates_OF_Vid"] + "_" + UI.current_default["Initial"]
+    file_name = file_formate + ".csv"
+
+    if not os.path.exists(file_name):
+        # File does not exist, so create it
+        with open(file_name, 'w', encoding='UTF8', newline='') as f:
             writer = csv.writer(f)
-            writer.writerow(current_default['data_header'])
-            #return
+            writer.writerow(UI.current_default['data_header'])
 
 
 def write_data(filename, data):
@@ -38,6 +90,14 @@ def write_data(filename, data):
         print("Unsupported file extension")
 
 
+def change_color(tag_id, tag_colors):
+    # Convert dictionary values to tuples
+    color = {int(key): tuple(value) for key, value in tag_colors.items()}
+    if tag_id in color:
+        return color[tag_id]
+    else:
+        return None
+
 
 
 def calculate_distance(point1, point2):
@@ -53,10 +113,10 @@ def calculate_distances_and_save_to_csv(data, output_file):
     #data = data['0']
     data[str(count)].pop("Dont_Display_Num")
     print('data',data)
-    number_to_letter = {1: 'A', 2: 'B', 3: 'C', 4: 'D', 5: 'E', 6: 'F', 7: 'G', 8: 'H', 9: 'I'}
+    number_to_letter = {0: 'A', 1: 'B', 2: 'C', 3: 'D', 4: 'E', 5: 'F', 6: 'G', 7: 'H', 8: 'I'}
     distances = []
     #current_default['data_format']
-    data_list = ast.literal_eval(current_default['data_format'])
+    data_list = ast.literal_eval(UI.current_default['data_format'])
    
     for key1, values1 in data.items():
         for key2, points2 in values1.items():
@@ -69,7 +129,9 @@ def calculate_distances_and_save_to_csv(data, output_file):
                     # Convert pixels to actual measurements
                     #pixels_to_cm_ratio = pixels_to_cm_ratio / length_in_pexels
                     calculated_distance_cm = distance * length_in_pexels
-                    distances.append([data_list[0], count, data_list[2], tag1, tag2, f"{calculated_distance_cm:.0f}"])
+                    #distances.append([data_list[0], count, data_list[2], tag1, tag2, f"{calculated_distance_cm:.0f}"])
+                    distances.append([UI.current_default["Experiment_Name"], UI.current_default["Round"], UI.current_default["Dates_OF_Vid"],UI.current_default["Date_Logged"],UI.current_default["set_file_name"],UI.current_default["nthreads"],UI.current_default["quad_decimate"],UI.current_default["quad_sigma"],UI.current_default["refine_edges"],UI.current_default["decode_sharpening"],UI.current_default["debug"],UI.current_default["Initial"] ,UI.current_default["skip_sec"],UI.current_default["Time_vide_started"],count,UI.current_default["Treatment"],tag1, tag2, f"{calculated_distance_cm:.0f}"])
+
     #print(output_file)
     # Save the distances to a CSV file
     file_exists = os.path.isfile(output_file)
@@ -77,10 +139,31 @@ def calculate_distances_and_save_to_csv(data, output_file):
     with open(output_file, 'a', newline='') as csvfile:
         csvwriter = csv.writer(csvfile)
         if not file_exists:
-            csvwriter.writerow(['Control', 'Snapshot', 'date', 'Source Key', 'Target Key', 'Distance'])
+            csvwriter.writerow([
+            'Experiment name',
+            'Round',
+            'Date of video',
+            'Date Logged',
+            'Qr Family',
+            'NThreads',
+            'Quad Decimage',
+            'Quad Sigma',
+            'Refine Edges',
+            'Decode Sharpening',
+            'Debug',
+            'Initials',
+            'Scan time interval (s)',
+            'Time Video Start',
+            'Time from start',
+            'Scan #',
+            'Treatment',
+            'Individual 1',
+            'Individual 2',
+            'Distance (cm)'
+        ])
         csvwriter.writerows(distances)
 
-    print(f"Distances saved to '{output_file}'.")
+    #print(f"Distances saved to '{output_file}'.")
 
 
 
@@ -94,7 +177,7 @@ def draw_tags( image,tags):
 
     t = datetime.now()
 
-    families = current_default['qr_family']['Option'][current_default["qr_family"]['Option_Num']]
+    families = UI.current_default['qr_family']['Option'][UI.current_default["qr_family"]['Option_Num']]
 
     for tag in tags:
         #this will remove the tags if pressed buttons and will distaply any manual pressed
@@ -146,7 +229,7 @@ def draw_tags( image,tags):
 
         #color = (0, 255, 0)
 
-        color = change_color(tag_id, current_default["qr_color"])
+        color = change_color(tag_id, UI.current_default["qr_color"])
 
         text_size, _ = cv2.getTextSize(text, font, font_scale, thickness)
 
@@ -166,7 +249,7 @@ def draw_tags( image,tags):
             Manual_cordinates = Final_All_data_saved[str(count)][str(number)]
             x = Manual_cordinates[0]
             y = Manual_cordinates[1]
-            current_color = change_color(int(number), current_default["qr_color"])
+            current_color = change_color(int(number), UI.current_default["qr_color"])
             cv2.circle(image, (x, y), 25, current_color, 2)
             cv2.putText(image, f"({number} {x}, {y})", (x, y), cv2.FONT_HERSHEY_SIMPLEX, 3, current_color, 10)
             #print("this is going throuth",x,y , number)
@@ -185,8 +268,8 @@ def draw_circle(image, event, x, y, flags, param):
         # Draw a completely hollow circle with a smaller radius
         outer_radius = 40
         #New_tuple = [int(current_circle[0] * current_default["size_reduced"]), int(current_circle[1] * current_default['size_reduced'])]
-        New_tuple = [int(x * current_default["size_reduced"]), int(y * current_default['size_reduced'])]
-        
+        New_tuple = [int(x * UI.current_default["size_reduced"]), int(y * UI.current_default['size_reduced'])]
+        print("Final_All_data_saved",Final_All_data_saved)
         current_button_pressed = Final_All_data_saved[str(count)]["Dont_Display_Num"][-1] 
         Final_All_data_saved[str(count)][current_button_pressed] = New_tuple
 
@@ -199,10 +282,14 @@ drawing = False
 pt1 = (-1, -1)
 pt2 = (-1, -1)
 pixels_to_cm_ratio = 0.0
+line_pt1, line_pt2 = (0, 0), (0, 0)
+
 def draw_line(event, x, y, flags, img):
     #global drawing, pt1, pt2, original_img , distance , finished_line, current_num_pressed , pixels_to_cm_ratio
-    global drawing, pt1, pt2, pixels_to_cm_ratio , length_in_pexels
+    global drawing, pt1, pt2, pixels_to_cm_ratio , length_in_pexels , line_pt2 ,line_pt1
     frame_height, frame_width, _ = img.shape
+    #print("checking if this is loopin")
+
     if event == cv2.EVENT_LBUTTONDOWN:
         if not drawing:
             pt1 = (x, y)
@@ -211,29 +298,53 @@ def draw_line(event, x, y, flags, img):
         else:
             pt2 = (x, y)
             drawing = False
-            line_pt1 = (int(pt1[0] * current_default["size_reduced"]), int(pt1[1] * current_default["size_reduced"]))
-            line_pt2 = (int(pt2[0] * current_default["size_reduced"]), int(pt2[1] * current_default["size_reduced"]))
+            line_pt1 = (int(pt1[0] * UI.current_default["size_reduced"]), int(pt1[1] * UI.current_default["size_reduced"]))
+            line_pt2 = (int(pt2[0] * UI.current_default["size_reduced"]), int(pt2[1] * UI.current_default["size_reduced"]))
             cv2.line(img, line_pt1, line_pt2, (0, 0, 255), 5)
             cv2.circle(img, line_pt1, 20, (255, 0, 0), 4)
             cv2.circle(img, line_pt2, 20, (255, 0, 0), 4)
             # Measurement prompt
-            cv2image_resized = cv2.resize(img, (int(frame_width/int(current_default["size_reduced"])), int(frame_height/int(current_default['size_reduced']))))
+            cv2image_resized = cv2.resize(img, (int(frame_width/int(UI.current_default["size_reduced"])), int(frame_height/int(UI.current_default['size_reduced']))))
             cv2.imshow('AprilTag Detect Demo', cv2image_resized)
-            result = simpledialog.askfloat("Measurement", "Enter the measurement in centimeters:")
-            if result is not None:
-                pt1 = line_pt1
-                pt2 = line_pt2
-                pixels_to_cm_ratio = result
-                midpoint = ((pt1[0] + pt2[0]) // 2, (pt1[1] + pt2[1]) // 2)  # Calculate midpoint using original coordinates
-                cv2.putText(img, f"{pixels_to_cm_ratio:.2f} cm", midpoint, cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255), 3)
-                drawing = True
-                length_in_pexels = ((pt2[0] - pt1[0]) ** 2 + (pt2[1] - pt1[1]) ** 2) ** 0.5
-                length_in_pexels = result / length_in_pexels
-                print("length_in_pexels",length_in_pexels)
-            else:
-                drawing = False
+            #result = simpledialog.askfloat("Measurement", "Enter the measurement in centimeters:")
+
+            UI.show_frame_page(UI.frame4, 292, 70)
+            #result = 70
+           # while global_var != None:
+            #    yield
+            #drawing = False
+def checking_input_measerments(img):
+    global drawing, pt1, pt2, pixels_to_cm_ratio , length_in_pexels ,result
+
+    #print("should continue ", result)
+    if result is not None:
+        pt1 = line_pt1
+        pt2 = line_pt2
+        pixels_to_cm_ratio = result
+        midpoint = ((pt1[0] + pt2[0]) // 2, (pt1[1] + pt2[1]) // 2)  # Calculate midpoint using original coordinates
+        cv2.putText(img, f"{pixels_to_cm_ratio:.2f} cm", midpoint, cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255), 3)
+        drawing = True
+        length_in_pexels = ((pt2[0] - pt1[0]) ** 2 + (pt2[1] - pt1[1]) ** 2) ** 0.5
+        length_in_pexels = result / length_in_pexels
+        print("length_in_pexels",length_in_pexels)
+        return drawing
+   # else:
+        #drawing = False
+        #return drawing
+
+
+
+
 
 Current_ALL_data_saved= None
+#these are function that are global
+clicked_skipped_button = False
+clicked_Undo_button = False
+Final_All_data_saved =  {}
+stop_ui_thread_flag = False
+Next_Frames_Capture = 0
+count = 0 
+result = None # Assume result is a global variable
 
 
 #selectroi in opencv2
@@ -249,6 +360,9 @@ def start_video_feed(files):
     #this keep track of the frams
     global Next_Frames_Capture
 
+
+    global drawing, pt1, pt2, pixels_to_cm_ratio , length_in_pexels ,result
+
     if len(files) == 0:
         #if video_window == None:
             #return
@@ -258,19 +372,19 @@ def start_video_feed(files):
     File = files.pop(0)
 
     at_detector = Detector(
-            families=current_default['qr_family']['Option'][current_default["qr_family"]['Option_Num']],
+            families=UI.current_default['qr_family']['Option'][UI.current_default["qr_family"]['Option_Num']],
 
-            nthreads=int(current_default["nthreads"]),
+            nthreads=int(UI.current_default["nthreads"]),
 
-            quad_decimate=float(current_default["quad_decimate"]),
+            quad_decimate=float(UI.current_default["quad_decimate"]),
 
-            quad_sigma=float(current_default["quad_sigma"]),
+            quad_sigma=float(UI.current_default["quad_sigma"]),
 
-            refine_edges=int(current_default["refine_edges"]),
+            refine_edges=int(UI.current_default["refine_edges"]),
 
-            decode_sharpening=float(current_default["decode_sharpening"]),
+            decode_sharpening=float(UI.current_default["decode_sharpening"]),
 
-            debug=int(current_default["debug"]),    )
+            debug=int(UI.current_default["debug"]),    )
 
     # Open the video feed
 
@@ -295,13 +409,15 @@ def start_video_feed(files):
     # Calculate the video length in seconds
     video_length = total_frames / fps
 
-    video_length = round(video_length / current_default["skip_sec"], 2)
+    video_length = round(video_length / UI.current_default["skip_sec"], 2)
 
     ret, image = cap.read()
     copy_image = copy.deepcopy(image)
 
     cv2.namedWindow('AprilTag Detect Demo')
+
     cv2.setMouseCallback('AprilTag Detect Demo', draw_line, image)
+
     fps = int(cap.get(cv2.CAP_PROP_FPS))
     #print("Frames per second:", fps)
 
@@ -309,24 +425,29 @@ def start_video_feed(files):
 
     while True:
         # Resize the debug image
-        cv2image_resized = cv2.resize(image, (int(frame_width/int(current_default["size_reduced"])), int(frame_height/int(current_default['size_reduced']))))
+        #print("True 351")
+
+        measurments = checking_input_measerments(image)
+
+        cv2image_resized = cv2.resize(image, (int(frame_width/int(UI.current_default["size_reduced"])), int(frame_height/int(UI.current_default['size_reduced']))))
         
         cv2.imshow('AprilTag Detect Demo', cv2image_resized)
         key = cv2.waitKey(1) & 0xFF
      
         if pixels_to_cm_ratio > 0.0:  # Check if distance is greater than 0.0
-            #print("Distance is greater than 0.0. Exiting loop.")
+            print("Distance is greater than 0.0. Exiting loop.")
             break
         if key == 27:  # Esc key
             break
 
+    UI.show_frame_page(UI.frame3, 800, 35)
 
     cv2.destroyAllWindows()
 
 
     #whow the new ui design in new thread 
-    video_thread = threading.Thread(target=UI_video_feed,args=(fps,))
-    video_thread.start()
+    #video_thread = threading.Thread(target=UI_video_feed,args=(fps,))
+    #video_thread.start()
 
     cv2.namedWindow("AprilTag Detect Demo")
 
@@ -344,12 +465,16 @@ def start_video_feed(files):
    # return 
 
     New_tuple = None
-    while pixels_to_cm_ratio > 0.0:
+    while pixels_to_cm_ratio > 0.0 and cv2.getWindowProperty("AprilTag Detect Demo", cv2.WND_PROP_VISIBLE) > 0.0:
+
+
+        #print(cv2.getWindowProperty("AprilTag Detect Demo", cv2.WND_PROP_VISIBLE))
         ret, image = cap.read()
         if ret:
+            
             if clicked_skipped_button == True:
                 #count = int(cap.get(cv2.CAP_PROP_POS_FRAMES) + current_default["skip_sec"] * cap.get(cv2.CAP_PROP_FPS))
-                Next_Frames_Capture = int(cap.get(cv2.CAP_PROP_POS_FRAMES) + current_default["skip_sec"] * cap.get(cv2.CAP_PROP_FPS))
+                Next_Frames_Capture = int(cap.get(cv2.CAP_PROP_POS_FRAMES) + UI.current_default["skip_sec"] * cap.get(cv2.CAP_PROP_FPS))
                 cap.set(cv2.CAP_PROP_POS_FRAMES, Next_Frames_Capture)
                 clicked_skipped_button = False
                 current_circle = None
@@ -357,10 +482,10 @@ def start_video_feed(files):
                 count = count + 1
 
             if clicked_Undo_button == True:
-                Next_Frames_Capture = int(Next_Frames_Capture - (current_default["skip_sec"] * cap.get(cv2.CAP_PROP_FPS)))
+                Next_Frames_Capture = int(Next_Frames_Capture - (UI.current_default["skip_sec"] * cap.get(cv2.CAP_PROP_FPS)))
                 cap.set(cv2.CAP_PROP_POS_FRAMES, Next_Frames_Capture)
                 clicked_Undo_button = False
-                print("Next_Frames_Capture",Next_Frames_Capture)
+                print("clicked_Undo_button",Next_Frames_Capture)
                 count  = count - 1
 
             # this is causing to be slow 
@@ -375,14 +500,18 @@ def start_video_feed(files):
                 tag_size=None,
             )
 
-            print("count",count)
+            #print("count",count)
             if count == int(video_length)+1:
                 print("completee Final_All_data_saved",Final_All_data_saved)
                  # Loop through each key in the data and call the function
                 for key, value in Final_All_data_saved.items():
                     #print("count",count)
                     count = key
-                    calculate_distances_and_save_to_csv({key: value}, current_default["set_data_file_name"]+".csv")
+
+                    file_formate =UI.current_default["Experiment_Name"]+UI.current_default["Round"]+"_"+UI.current_default["Treatment"]+"_"+UI.current_default["Dates_OF_Vid"]+"_"+UI.current_default["Initial"]
+                    file_name =file_formate +".csv"
+
+                    calculate_distances_and_save_to_csv({key: value}, file_name)
                 cv2.destroyAllWindows()
                 break
 
@@ -400,35 +529,20 @@ def start_video_feed(files):
                 midpoint = ((pt1[0] + pt2[0]) // 2, (pt1[1] + pt2[1]) // 2) 
                 cv2.putText(debug_image, f"{pixels_to_cm_ratio:.2f} cm", midpoint, cv2.FONT_HERSHEY_SIMPLEX, 3, (0, 0, 255), 10)
                 cv2.circle(debug_image, pt1, 20, (255, 0, 0), 4)
-                cv2.circle(debug_image, pt2, 20, (255, 0, 0), 4)
+                cv2.circle(debug_image, pt2, 20, (255, 0, 0), 4)  
 
-                    
-
-            cv2image_resized = cv2.resize(debug_image, (int(frame_width/int(current_default["size_reduced"])), int(frame_height/int(current_default['size_reduced']))))
+            cv2image_resized = cv2.resize(debug_image, (int(frame_width/int(UI.current_default["size_reduced"])), int(frame_height/int(UI.current_default['size_reduced']))))
             cv2.imshow('AprilTag Detect Demo', cv2image_resized)
        
         else:
             cv2.destroyAllWindows()
             break
+#this help to reset all seeting to default
 
-            #if count == 6:
-                 
+    # Call this function whenever you want to reset the global variables
+    reset_globals()
 
-        """
-        #close the video if there is no data frames
-        else:
-            if counter == 6:
-                print("completee Final_All_data_saved",Final_All_data_saved)
-                # Loop through each key in the data and call the function
-                for key, value in Final_All_data_saved.items():
-                    print("count",count)
-                    counter = key
-                    calculate_distances_and_save_to_csv({key: value}, current_default["set_data_file_name"]+".csv")
-
-            cv2.destroyAllWindows()
-            break
-    """
     cv2.destroyAllWindows()
-
+    UI.show_frame_page(UI.frame1, 1065,260)
 
     return 
