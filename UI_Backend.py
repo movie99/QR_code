@@ -14,7 +14,7 @@ from tkinter import messagebox, ttk
 from QR_generation import color_qr
 from QR_detection import write_data
 from QR_detection import start_video_feed
-from QR_detection import Final_All_data_saved
+from QR_detection import number_picker
 from QR_detection import count
 from QR_detection import create_csv
 #from QR_detection import clicked_skipped_button
@@ -31,13 +31,14 @@ def Entry_Changed(event,key_name,entry):
     #global current_default
     new_text = entry.get()
     UI.current_default[key_name] = entry.get()
-    print("current_default changed:",UI.current_default)
+    #print("current_default changed:",UI.current_default)
 
 def Spinbox_changed(value,key_name):
     #global current_default
     #size_reduce cant be dviced by zero cause of scren 
     UI.current_default[key_name]= value
-    print("current_default changed:",UI.current_default)
+    #print("current_default changed:",UI.current_default)
+
 
 def CheckButton_changed(event ,value):
     #global current_default
@@ -88,17 +89,8 @@ def custom_button_UI(button, number):
 
 #the number 2 is the seaction of the manual selection of positions
 def custom_button_UI_2(button, number):
-    global current_default , Final_All_data_saved
-    print("button", button.cget("text"))
-    button_text =  button.cget("text")
-    #count = str(co)
-    if button_text in Final_All_data_saved[str(QR_detection.count)]["Dont_Display_Num"]:
-        Final_All_data_saved[str(QR_detection.count)]["Dont_Display_Num"].remove(str(button_text))
-        #Final_All_data_saved[str(count)].pop(str(button_text))
-
-    elif button_text.isdigit():
-        Final_All_data_saved[str(QR_detection.count)]["Dont_Display_Num"].append(str(button_text))
-        del Final_All_data_saved[str(QR_detection.count)][str(button_text)]
+    number_picker(button, number)
+    #pass
 
 
 
@@ -156,6 +148,9 @@ def Button_pressed(button,frame = None , width= None, height= None ):
         #UI.show_frame_page(UI.frame4, 292, 70)
         video_thread = threading.Thread(target=start_video_feed, args=(file_paths,))
         video_thread.start()
+
+
+        print("this code ened")
         #start_video_feed(file_paths)
 
 

@@ -12,6 +12,9 @@ import base64
 import io
 import json
 import os
+import uuid
+
+
 
 #this LIB is the backend fucn when presssed 
 from UI_Backend import create_spinbox_values , combobox_changed ,Button_pressed , Spinbox_changed , Entry_Changed ,CheckButton_changed ,create_spinbox_values , custom_button_UI ,custom_button_UI_2
@@ -59,10 +62,18 @@ def UI_Gen(frame, All_Labels=None, ALL_Combobox=None, All_Entry=None, All_Spinbo
 
     if All_Entry:
         # create entries
-        for key, value in All_Entry.items():
+        for index, (key, value) in enumerate(All_Entry.items()):
+            # 'index' will give you the loop iteration number
+            #print(f"Iteration {index + 1}: Key = {key}, Value = {value}")
+            #print("key", key)
+            #print("value", value)
+            random_id = str(uuid.uuid4())
+            print("Random ID:", random_id)
+            
             key_name = key
             key = current_default[str(key)]
-            entry = ttk.Entry(frame, textvariable=key, style=value['style'])
+            print("key", key)
+            entry = ttk.Entry(frame, textvariable=str(random_id)+"", style=value['style'])
             entry.grid(row=value["row"], column=value["column"], sticky=value["sticky"])
             entry.bind("<KeyRelease>", lambda event, m=key_name, c=entry: Entry_Changed(event, m, c))
             entry.insert(0, key)
@@ -90,6 +101,7 @@ def UI_Gen(frame, All_Labels=None, ALL_Combobox=None, All_Entry=None, All_Spinbo
             combobox.bind("<<ComboboxSelected>>", combobox_changed)
             combobox.current(current_default['qr_family']['Option_Num'])
             #combobox.grid_forget()
+
     if All_Check_Box:
         for key, value in All_Check_Box.items():
             key_name = key
@@ -127,7 +139,7 @@ def UI_Gen(frame, All_Labels=None, ALL_Combobox=None, All_Entry=None, All_Spinbo
 
                 # Grid the button with sticky='ew' so it expands only horizontally
                 button2.grid(row=0, column=i, sticky="ew")
-    print(custom_lists_buttons2)    
+    #print(custom_lists_buttons2)    
 
     if custom_lists_buttons2 and isinstance(custom_lists_buttons2, dict):
         for key, value in custom_lists_buttons2.items():

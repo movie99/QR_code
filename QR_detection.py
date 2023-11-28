@@ -46,16 +46,17 @@ def reset_globals():
     Next_Frames_Capture = 0
     count = 0
     result = None
+
     drawing = False
     pt1, pt2 = (-1, -1), (-1, -1)
     pixels_to_cm_ratio = 0.0
     length_in_pexels = 0
     line_pt1, line_pt2 = (0, 0), (0, 0)
 
+    Current_ALL_data_saved= None
 
 
 def create_csv():
-
     # Assuming UI.current_default['data_header'] is the list of column names
     file_formate = UI.current_default["Experiment_Name"] + UI.current_default["Round"] + "_" + UI.current_default["Treatment"] + "_" + UI.current_default["Dates_OF_Vid"] + "_" + UI.current_default["Initial"]
     file_name = file_formate + ".csv"
@@ -65,6 +66,22 @@ def create_csv():
         with open(file_name, 'w', encoding='UTF8', newline='') as f:
             writer = csv.writer(f)
             writer.writerow(UI.current_default['data_header'])
+
+def number_picker(button, number):
+    global Final_All_data_saved
+    #print("button", button.cget("text"))
+    button_text =  button.cget("text")
+
+    print("Final_All_data_saved inside custom_button_UI_2", Final_All_data_saved)
+
+    if button_text in Final_All_data_saved[str(count)]["Dont_Display_Num"]:
+        Final_All_data_saved[str(count)]["Dont_Display_Num"].remove(str(button_text))
+        #Final_All_data_saved[str(count)].pop(str(button_text))
+
+    elif button_text.isdigit():
+        Final_All_data_saved[str(count)]["Dont_Display_Num"].append(str(button_text))
+        del Final_All_data_saved[str(count)][str(button_text)]
+
 
 
 def write_data(filename, data):
@@ -112,7 +129,7 @@ def calculate_distances_and_save_to_csv(data, output_file):
     
     #data = data['0']
     data[str(count)].pop("Dont_Display_Num")
-    print('data',data)
+    #print('data',data)
     number_to_letter = {0: 'A', 1: 'B', 2: 'C', 3: 'D', 4: 'E', 5: 'F', 6: 'G', 7: 'H', 8: 'I'}
     distances = []
     #current_default['data_format']
@@ -130,7 +147,10 @@ def calculate_distances_and_save_to_csv(data, output_file):
                     #pixels_to_cm_ratio = pixels_to_cm_ratio / length_in_pexels
                     calculated_distance_cm = distance * length_in_pexels
                     #distances.append([data_list[0], count, data_list[2], tag1, tag2, f"{calculated_distance_cm:.0f}"])
-                    distances.append([UI.current_default["Experiment_Name"], UI.current_default["Round"], UI.current_default["Dates_OF_Vid"],UI.current_default["Date_Logged"],UI.current_default["set_file_name"],UI.current_default["nthreads"],UI.current_default["quad_decimate"],UI.current_default["quad_sigma"],UI.current_default["refine_edges"],UI.current_default["decode_sharpening"],UI.current_default["debug"],UI.current_default["Initial"] ,UI.current_default["skip_sec"],UI.current_default["Time_vide_started"],count,UI.current_default["Treatment"],tag1, tag2, f"{calculated_distance_cm:.0f}"])
+                    #distances.append([UI.current_default["Experiment_Name"], UI.current_default["Round"], UI.current_default["Dates_OF_Vid"],UI.current_default["Date_Logged"],UI.current_default["set_file_name"],UI.current_default["nthreads"],UI.current_default["quad_decimate"],UI.current_default["quad_sigma"],UI.current_default["refine_edges"],UI.current_default["decode_sharpening"],UI.current_default["debug"],UI.current_default["Initial"] ,UI.current_default["skip_sec"],"0",UI.current_default["Time_vide_started"],count,UI.current_default["Treatment"],tag1, tag2, f"{calculated_distance_cm:.0f}"])
+                    distances.append([UI.current_default["Experiment_Name"], UI.current_default["Round"], UI.current_default["Dates_OF_Vid"],UI.current_default["Date_Logged"],UI.current_default["set_file_name"],UI.current_default["nthreads"],UI.current_default["quad_decimate"],UI.current_default["quad_sigma"],UI.current_default["refine_edges"],UI.current_default["decode_sharpening"],UI.current_default["debug"],UI.current_default["Initial"] ,UI.current_default["skip_sec"],UI.current_default["Time_vide_started"],"0",count,UI.current_default["Treatment"],tag1, tag2, f"{calculated_distance_cm:.0f}"])
+
+
 
     #print(output_file)
     # Save the distances to a CSV file
@@ -269,8 +289,11 @@ def draw_circle(image, event, x, y, flags, param):
         outer_radius = 40
         #New_tuple = [int(current_circle[0] * current_default["size_reduced"]), int(current_circle[1] * current_default['size_reduced'])]
         New_tuple = [int(x * UI.current_default["size_reduced"]), int(y * UI.current_default['size_reduced'])]
-        print("Final_All_data_saved",Final_All_data_saved)
+
+        print("Final_All_data_saved inside draw circle",Final_All_data_saved)
+        print("count circle", count)
         current_button_pressed = Final_All_data_saved[str(count)]["Dont_Display_Num"][-1] 
+
         Final_All_data_saved[str(count)][current_button_pressed] = New_tuple
 
 
@@ -422,7 +445,7 @@ def start_video_feed(files):
     #print("Frames per second:", fps)
 
     
-
+    print("Final_All_data_saved",Final_All_data_saved)
     while True:
         # Resize the debug image
         #print("True 351")
@@ -462,6 +485,7 @@ def start_video_feed(files):
         Final_All_data_saved[str(i)] = {}  # Create a dictionary for each frame time
         Final_All_data_saved[str(i)]["Dont_Display_Num"] = []
 
+    print("Final_All_data_saved",Final_All_data_saved)
    # return 
 
     New_tuple = None
@@ -512,6 +536,10 @@ def start_video_feed(files):
                     file_name =file_formate +".csv"
 
                     calculate_distances_and_save_to_csv({key: value}, file_name)
+
+                Final_All_data_saved = {}
+                reset_globals()
+
                 cv2.destroyAllWindows()
                 break
 
@@ -536,8 +564,10 @@ def start_video_feed(files):
        
         else:
             cv2.destroyAllWindows()
+            reset_globals()
             break
-#this help to reset all seeting to default
+
+    #this help to reset all seeting to default
 
     # Call this function whenever you want to reset the global variables
     reset_globals()
