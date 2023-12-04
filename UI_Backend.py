@@ -17,7 +17,7 @@ from QR_detection import start_video_feed
 from QR_detection import number_picker
 from QR_detection import count
 from QR_detection import create_csv
-#from QR_detection import clicked_skipped_button
+from QR_detection import decrease_value
 #from QR_detection import clicked_Undo_button
 import QR_detection
  
@@ -117,7 +117,11 @@ def Button_pressed(button,frame = None , width= None, height= None ):
         print("undo")
 
     if button == "-":
-        print("- sign")
+
+       # print("minuse sign",UI.current_default['minuse'])
+
+        decrease_value(UI.current_default['minuse'])
+        #print("- sign")
 
     if button == "ok":
         print("ok")

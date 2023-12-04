@@ -25,6 +25,9 @@ from datetime import datetime
 from pupil_apriltags import Detector
 from tkinter import simpledialog, messagebox
 
+from datetime import datetime, timedelta
+
+
 def reset_globals():
     global clicked_skipped_button
     global clicked_Undo_button
@@ -58,7 +61,8 @@ def reset_globals():
 
 def create_csv():
     # Assuming UI.current_default['data_header'] is the list of column names
-    file_formate = UI.current_default["Experiment_Name"] + UI.current_default["Round"] + "_" + UI.current_default["Treatment"] + "_" + UI.current_default["Dates_OF_Vid"] + "_" + UI.current_default["Initial"]
+    remove_slash = str(UI.current_default["Dates_OF_Vid"]).replace("/","_")
+    file_formate = UI.current_default["Experiment_Name"] + UI.current_default["Round"] + "_" + UI.current_default["Treatment"] + "_" + remove_slash + "_" + UI.current_default["Initial"]
     file_name = file_formate + ".csv"
 
     if not os.path.exists(file_name):
@@ -67,6 +71,9 @@ def create_csv():
             writer = csv.writer(f)
             writer.writerow(UI.current_default['data_header'])
 
+
+
+#this is the backend code code , it's here due to the global var not availbe in the ui_backend it will break
 def number_picker(button, number):
     global Final_All_data_saved
     #print("button", button.cget("text"))
@@ -81,6 +88,24 @@ def number_picker(button, number):
     elif button_text.isdigit():
         Final_All_data_saved[str(count)]["Dont_Display_Num"].append(str(button_text))
         del Final_All_data_saved[str(count)][str(button_text)]
+
+
+#this will change the frame
+def decrease_value(minuse):
+    global Next_Frames_Capture
+    if Next_Frames_Capture == 0:
+        pass 
+    else:
+        Next_Frames_Capture = int(Next_Frames_Capture - (fps *  int( minuse )))
+    
+#print("Next_Frames_Capture",Next_Frames_Capture)
+#this will change the frame 
+def increase_value():
+    global Next_Frames_Capture
+    if Next_Frames_Capture == 0:
+        Next_Frames_Capture = int(fps * int(input_box.get()))   
+    else:
+        Next_Frames_Capture = int(Next_Frames_Capture + (fps *  int(input_box.get())))
 
 
 
@@ -123,7 +148,41 @@ def calculate_distance(point1, point2):
     distance = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
     return distance
 
+def modify_dict(input_dict, first_value):
+    result_dict = {}
+    # Set the value for the first key
+    result_dict['0'] = first_value
+    # Move the keys forward and set their values
+    for key, value in input_dict.items():
+        new_key = str(int(key) + 1)
+        result_dict[new_key] = value
+    # Remove the last key
+    result_dict.pop(str(len(input_dict)))
+    return result_dict
+
+def add_seconds_to_time(current_time, current_seconds):
+    # Convert time string to datetime object
+    time_format = "%I:%M%p"  # Example: "02:59pm"
+    current_datetime = datetime.strptime(current_time, time_format)
+
+    # Convert current_seconds to integer
+    current_seconds = int(current_seconds)
+
+    # Create a timedelta with the given number of seconds
+    time_delta = timedelta(seconds=current_seconds)
+
+    # Add the timedelta to the datetime object
+    new_datetime = current_datetime + time_delta
+
+    # Format the new time as a string with correct AM/PM case
+    new_time = new_datetime.strftime("%I:%M:%S%p").upper()
+
+    return new_time
+
+
+
 def calculate_distances_and_save_to_csv(data, output_file):
+    output_file = output_file.replace("/","_")
     #global counter
     # Create a dictionary to map numbers to letters
     
@@ -134,7 +193,12 @@ def calculate_distances_and_save_to_csv(data, output_file):
     distances = []
     #current_default['data_format']
     data_list = ast.literal_eval(UI.current_default['data_format'])
-   
+    print("tracking_time[count] = Next_Frames_Capture",tracking_time)
+    print("main fps",fps)
+    #print("fps",)
+
+    new_tracking_time = modify_dict(tracking_time, UI.current_default["Time_vide_started"])
+
     for key1, values1 in data.items():
         for key2, points2 in values1.items():
             for key3, points3 in values1.items():
@@ -146,9 +210,18 @@ def calculate_distances_and_save_to_csv(data, output_file):
                     # Convert pixels to actual measurements
                     #pixels_to_cm_ratio = pixels_to_cm_ratio / length_in_pexels
                     calculated_distance_cm = distance * length_in_pexels
+                    if str(count) != '0':
+                        start_time2 = round(round(float(new_tracking_time[str(count)]) / round(fps, 1), 1))
+
+                        start_time = add_seconds_to_time(UI.current_default["Time_vide_started"], start_time2)
+                    else:
+  
+                        start_time = new_tracking_time[str(count)]
+                        #
+
                     #distances.append([data_list[0], count, data_list[2], tag1, tag2, f"{calculated_distance_cm:.0f}"])
                     #distances.append([UI.current_default["Experiment_Name"], UI.current_default["Round"], UI.current_default["Dates_OF_Vid"],UI.current_default["Date_Logged"],UI.current_default["set_file_name"],UI.current_default["nthreads"],UI.current_default["quad_decimate"],UI.current_default["quad_sigma"],UI.current_default["refine_edges"],UI.current_default["decode_sharpening"],UI.current_default["debug"],UI.current_default["Initial"] ,UI.current_default["skip_sec"],"0",UI.current_default["Time_vide_started"],count,UI.current_default["Treatment"],tag1, tag2, f"{calculated_distance_cm:.0f}"])
-                    distances.append([UI.current_default["Experiment_Name"], UI.current_default["Round"], UI.current_default["Dates_OF_Vid"],UI.current_default["Date_Logged"],UI.current_default["set_file_name"],UI.current_default["nthreads"],UI.current_default["quad_decimate"],UI.current_default["quad_sigma"],UI.current_default["refine_edges"],UI.current_default["decode_sharpening"],UI.current_default["debug"],UI.current_default["Initial"] ,UI.current_default["skip_sec"],UI.current_default["Time_vide_started"],"0",count,UI.current_default["Treatment"],tag1, tag2, f"{calculated_distance_cm:.0f}"])
+                    distances.append([UI.current_default["Experiment_Name"], UI.current_default["Round"], UI.current_default["Dates_OF_Vid"],UI.current_default["Date_Logged"],UI.current_default["set_file_name"],UI.current_default["nthreads"],UI.current_default["quad_decimate"],UI.current_default["quad_sigma"],UI.current_default["refine_edges"],UI.current_default["decode_sharpening"],UI.current_default["debug"],UI.current_default["Initial"] ,UI.current_default["skip_sec"],UI.current_default["Time_vide_started"],str(start_time),count,UI.current_default["Treatment"],tag1, tag2, f"{calculated_distance_cm:.0f}"])
 
 
 
@@ -336,6 +409,7 @@ def draw_line(event, x, y, flags, img):
            # while global_var != None:
             #    yield
             #drawing = False
+
 def checking_input_measerments(img):
     global drawing, pt1, pt2, pixels_to_cm_ratio , length_in_pexels ,result
 
@@ -368,7 +442,9 @@ stop_ui_thread_flag = False
 Next_Frames_Capture = 0
 count = 0 
 result = None # Assume result is a global variable
-
+fps = None
+#this track the time when press next or unod or even minus time
+tracking_time = {}
 
 #selectroi in opencv2
 #also create a line in opencv2
@@ -382,7 +458,8 @@ def start_video_feed(files):
     global count
     #this keep track of the frams
     global Next_Frames_Capture
-
+    global fps
+    global tracking_time
 
     global drawing, pt1, pt2, pixels_to_cm_ratio , length_in_pexels ,result
 
@@ -441,7 +518,7 @@ def start_video_feed(files):
 
     cv2.setMouseCallback('AprilTag Detect Demo', draw_line, image)
 
-    fps = int(cap.get(cv2.CAP_PROP_FPS))
+    fps = cap.get(cv2.CAP_PROP_FPS)
     #print("Frames per second:", fps)
 
     
@@ -502,7 +579,8 @@ def start_video_feed(files):
                 cap.set(cv2.CAP_PROP_POS_FRAMES, Next_Frames_Capture)
                 clicked_skipped_button = False
                 current_circle = None
-                print("Next_Frames_Capture",Next_Frames_Capture)
+                #print("Next_Frames_Capture",Next_Frames_Capture)
+                tracking_time[str(count)] = Next_Frames_Capture
                 count = count + 1
 
             if clicked_Undo_button == True:
@@ -510,6 +588,7 @@ def start_video_feed(files):
                 cap.set(cv2.CAP_PROP_POS_FRAMES, Next_Frames_Capture)
                 clicked_Undo_button = False
                 print("clicked_Undo_button",Next_Frames_Capture)
+                tracking_time[str(count)] = Next_Frames_Capture
                 count  = count - 1
 
             # this is causing to be slow 
