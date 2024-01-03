@@ -1,5 +1,5 @@
 # QR_code
-bird research
+bird research setup
 
 ![Image Alt Text](https://github.com/movie99/QR_code/raw/main/Untitled%20design.gif)
 
