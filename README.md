@@ -1,7 +1,8 @@
 # QR_code
-Installing Python requires version 3.9.9 and will not work with higher versions of Python.
+Installing Python
+To ensure compatibility, it is recommended to install Python version 3.9.9. Please note that higher versions of Python may not work with the specific requirements.
 
-https://www.python.org/downloads/release/python-399/
+For the latest version of Python 3.9.9, you can download it from the official Python website: Python 3.9.9
 
 bird research setup
 ![Image Alt Text](https://github.com/movie99/QR_code/raw/main/Untitled%20design.gif)
