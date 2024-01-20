@@ -1,4 +1,8 @@
 # QR_code
+## User Guide PDF
+
+You can download the complete user guide in PDF format by clicking [here](https://github.com/movie99/QR_code/blob/main/QR%20Code%20Program%20User%20Guide.pdf).
+
 ### Python Installation Guide
 
 
@@ -24,8 +28,4 @@ To get started with python code, follow these steps:
 pip install -r requirements.txt
 python main.py
 
-## User Guide PDF
 
-You can download the complete user guide in PDF format by clicking [here](https://github.com/movie99/QR_code/blob/main/QR%20Code%20Program%20User%20Guide.pdf).
-
-Feel free to explore the guide and reach out if you have any questions or feedback!
