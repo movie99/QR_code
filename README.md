@@ -2,7 +2,7 @@
 
 ## User Guide PDF
 
-You can download the complete user guide in PDF format by clicking [here](https://github.com/movie99/QR_code/blob/main/QR%20Code%20Program%20User%20Guide.pdf).
+You can download the complete user guide in PDF format by clicking [here](https://github.com/movie99/QR_code/blob/main/QR%20Code%20Program%20User%20Guide.pdf). Also includes credits
 
 ### Python Installation Guide
 
